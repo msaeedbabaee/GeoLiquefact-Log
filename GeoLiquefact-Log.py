@@ -153,7 +153,10 @@ if st.sidebar.button("Add Sample to Matrix"):
 df_results = pd.DataFrame(st.session_state.sample_list)
 
 st.write("### 📊 Soil Sensitivity Evaluation Matrix")
-st.dataframe(df_results[["Sample ID", "LL (%)", "PL (%)", "wn (%)", "PI (%)", "LI", "Sensitivity (St)", "US Classification", "Swedish Classification", "Critical Status"]], use_container_state=False)
+st.dataframe(
+    df_results[["Sample ID", "LL (%)", "PL (%)", "wn (%)", "PI (%)", "LI", "Sensitivity (St)", "US Classification", "Swedish Classification", "Critical Status"]],
+    use_container_width=True
+)
 
 st.write("### 🚨 Automated Safety Alerts & Hazard Logs")
 for idx, row in df_results.iterrows():
