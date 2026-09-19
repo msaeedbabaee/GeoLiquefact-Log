@@ -1,3 +1,27 @@
+بر اساس راهنمای مهندسی پی کانادا (Canadian Foundation Engineering Manual - فصل ۴)، معیارهای طبقه‌بندی استواری خاک‌های چسبنده بر اساس مقاومت برشی زهکشی‌نشده ($c_u$) و تعداد ضربات تست نفوذ استاندارد (SPT-N) به جدول زیر مستند شده است:
+
+* **بسیار نرم (Very soft):** $c_u < 12$ کیلوپاسکال
+
+
+* **نرم (Soft):** $12 \le c_u < 25$ کیلوپاسکال
+
+
+* **سفت نسبی (Firm):** $25 \le c_u < 50$ کیلوپاسکال
+
+
+* **سفت (Stiff):** $50 \le c_u < 100$ کیلوپاسکال
+
+
+* **بسیار سفت (Very stiff):** $100 \le c_u \le 200$ کیلوپاسکال
+
+
+* **سخت (Hard):** $c_u > 200$ کیلوپاسکال
+
+
+
+کد کامل و به‌روزرسانی‌شده‌ی استریم‌لیت که ویژگی **تعیین استواری خاک (Consistency)** بر اساس جدول ۴.۱ مرجع مذکور را به تحلیل‌گر اضافه می‌کند، به شرح زیر است:
+
+```python
 import streamlit as st
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -7,8 +31,9 @@ st.set_page_config(page_title="GeoLiquefact & Sensitivity Analyzer", layout="wid
 
 class CohesiveSensitivityAnalyzer:
     """
-    Evaluates Sensitivity (St), Liquefaction Potential, and Quick Clay behavior 
-    for cohesive soils based on Atterberg Limits, Natural Water Content, and Shear Strength.
+    Evaluates Sensitivity (St), Liquefaction Potential, Quick Clay behavior, 
+    and Soil Consistency based on Atterberg Limits, Water Content, and Shear Strength.
+    Reference: Canadian Foundation Engineering Manual, Chapter 4[cite: 1].
     """
 
     def calculate_indices(self, LL, PL, wn):
@@ -17,6 +42,21 @@ class CohesiveSensitivityAnalyzer:
             raise ValueError("LL must be strictly greater than PL.")
         LI = (wn - PL) / PI
         return round(PI, 2), round(LI, 2)
+
+    def classify_consistency(self, cu):
+        """Classifies soil consistency based on Undrained Shear Strength (Table 4.1)[cite: 1]"""
+        if cu < 12:
+            return "Very Soft"
+        elif 12 <= cu < 25:
+            return "Soft"
+        elif 25 <= cu < 50:
+            return "Firm"
+        elif 50 <= cu < 100:
+            return "Stiff"
+        elif 100 <= cu <= 200:
+            return "Very Stiff"
+        else:
+            return "Hard"
 
     def classify_sensitivity_us(self, St):
         """American / Skempton & Mitchell Sensitivity Classification"""
@@ -48,12 +88,13 @@ class CohesiveSensitivityAnalyzer:
         else:
             return "Quick Clay (Kvicklera)"
 
-    def evaluate_sample(self, sample_name, LL, PL, wn, cu_undisturbed, cu_remolded):
+    def evaluate_sample(self, sample_name, LL, PL, wn, cu_undisturbed, cu_remolded, spt_n):
         PI, LI = self.calculate_indices(LL, PL, wn)
         St = round(cu_undisturbed / cu_remolded, 2) if cu_remolded > 0 else 999.0
 
         us_class = self.classify_sensitivity_us(St)
         swedish_class = self.classify_sensitivity_swedish(St)
+        consistency_class = self.classify_consistency(cu_undisturbed)
 
         # Liquefaction / Quick Behavior Warnings
         warnings = []
@@ -83,6 +124,8 @@ class CohesiveSensitivityAnalyzer:
             "LI": LI,
             "cu (kPa)": cu_undisturbed,
             "cu_remolded (kPa)": cu_remolded,
+            "SPT-N": spt_n,
+            "Consistency": consistency_class,
             "Sensitivity (St)": St,
             "US Classification": us_class,
             "Swedish Classification": swedish_class,
@@ -121,7 +164,7 @@ class CohesiveSensitivityAnalyzer:
 # ==========================================
 
 st.title("💧 Cohesive Soil Sensitivity & Liquefaction Matrix")
-st.markdown("Automated evaluation of soil sensitivity ($S_t$), quick clay hazards, and liquid-like behavior based on Atterberg limits.")
+st.markdown("Automated evaluation of soil sensitivity ($S_t$), quick clay hazards, soil consistency (CFEM Table 4.1), and liquid-like behavior[cite: 1].")
 
 st.sidebar.header("Add Laboratory Sample")
 sample_id = st.sidebar.text_input("Sample ID", "BH-01 (Depth 4m)")
@@ -130,20 +173,21 @@ pl_input = st.sidebar.number_input("Plastic Limit - PL (%)", value=20.0, step=1.
 wn_input = st.sidebar.number_input("Natural Water Content - wn (%)", value=48.0, step=1.0)
 cu_input = st.sidebar.number_input("Undisturbed Shear Strength - cu (kPa)", value=25.0, step=1.0)
 cur_input = st.sidebar.number_input("Remolded Shear Strength - cur (kPa)", value=0.4, step=0.1)
+spt_input = st.sidebar.number_input("SPT-N Blow Count (Optional)", value=6, step=1)
 
 analyzer = CohesiveSensitivityAnalyzer()
 
 # Pre-loaded Benchmark Test Dataset
 if "sample_list" not in st.session_state:
     st.session_state.sample_list = [
-        analyzer.evaluate_sample("BH-01 (Stiff Clay)", LL=40, PL=18, wn=22, cu_undisturbed=60, cu_remolded=15),
-        analyzer.evaluate_sample("BH-02 (Sensitive Clay)", LL=52, PL=22, wn=55, cu_undisturbed=30, cu_remolded=1.2),
-        analyzer.evaluate_sample("BH-03 (Quick Clay Hazard)", LL=35, PL=15, wn=42, cu_undisturbed=20, cu_remolded=0.3),
+        analyzer.evaluate_sample("BH-01 (Stiff Clay)", LL=40, PL=18, wn=22, cu_undisturbed=60, cu_remolded=15, spt_n=10),
+        analyzer.evaluate_sample("BH-02 (Sensitive Clay)", LL=52, PL=22, wn=55, cu_undisturbed=30, cu_remolded=1.2, spt_n=5),
+        analyzer.evaluate_sample("BH-03 (Quick Clay Hazard)", LL=35, PL=15, wn=42, cu_undisturbed=20, cu_remolded=0.3, spt_n=3),
     ]
 
 if st.sidebar.button("Add Sample to Matrix"):
     try:
-        new_sample = analyzer.evaluate_sample(sample_id, ll_input, pl_input, wn_input, cu_input, cur_input)
+        new_sample = analyzer.evaluate_sample(sample_id, ll_input, pl_input, wn_input, cu_input, cur_input, spt_input)
         st.session_state.sample_list.append(new_sample)
         st.sidebar.success(f"Sample {sample_id} added successfully!")
     except Exception as e:
@@ -152,11 +196,8 @@ if st.sidebar.button("Add Sample to Matrix"):
 # Display Results
 df_results = pd.DataFrame(st.session_state.sample_list)
 
-st.write("### 📊 Soil Sensitivity Evaluation Matrix")
-st.dataframe(
-    df_results[["Sample ID", "LL (%)", "PL (%)", "wn (%)", "PI (%)", "LI", "Sensitivity (St)", "US Classification", "Swedish Classification", "Critical Status"]],
-    use_container_width=True
-)
+st.write("### 📊 Soil Sensitivity & Consistency Evaluation Matrix")
+st.dataframe(df_results[["Sample ID", "LL (%)", "PL (%)", "wn (%)", "PI (%)", "LI", "cu (kPa)", "Consistency", "Sensitivity (St)", "US Classification", "Swedish Classification", "Critical Status"]], use_container_state=False)
 
 st.write("### 🚨 Automated Safety Alerts & Hazard Logs")
 for idx, row in df_results.iterrows():
@@ -169,3 +210,5 @@ for idx, row in df_results.iterrows():
 st.write("### 📈 Plasticity Chart (Atterberg Limits) & Critical Samples")
 fig = analyzer.plot_casagrande_chart(st.session_state.sample_list)
 st.pyplot(fig)
+
+```
