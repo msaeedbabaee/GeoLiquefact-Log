@@ -1,27 +1,3 @@
-بر اساس راهنمای مهندسی پی کانادا (Canadian Foundation Engineering Manual - فصل ۴)، معیارهای طبقه‌بندی استواری خاک‌های چسبنده بر اساس مقاومت برشی زهکشی‌نشده ($c_u$) و تعداد ضربات تست نفوذ استاندارد (SPT-N) به جدول زیر مستند شده است:
-
-* **بسیار نرم (Very soft):** $c_u < 12$ کیلوپاسکال
-
-
-* **نرم (Soft):** $12 \le c_u < 25$ کیلوپاسکال
-
-
-* **سفت نسبی (Firm):** $25 \le c_u < 50$ کیلوپاسکال
-
-
-* **سفت (Stiff):** $50 \le c_u < 100$ کیلوپاسکال
-
-
-* **بسیار سفت (Very stiff):** $100 \le c_u \le 200$ کیلوپاسکال
-
-
-* **سخت (Hard):** $c_u > 200$ کیلوپاسکال
-
-
-
-کد کامل و به‌روزرسانی‌شده‌ی استریم‌لیت که ویژگی **تعیین استواری خاک (Consistency)** بر اساس جدول ۴.۱ مرجع مذکور را به تحلیل‌گر اضافه می‌کند، به شرح زیر است:
-
-```python
 import streamlit as st
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -210,5 +186,3 @@ for idx, row in df_results.iterrows():
 st.write("### 📈 Plasticity Chart (Atterberg Limits) & Critical Samples")
 fig = analyzer.plot_casagrande_chart(st.session_state.sample_list)
 st.pyplot(fig)
-
-```
